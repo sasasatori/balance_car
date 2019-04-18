@@ -30,7 +30,7 @@
 //SoftwareSerial BTserial(BTRX,BTTX);
 
 //PID 相关
-float Kp1=-5.0,Ki1=0.0,Kd1=-1.0,/*第一级的PID系数*/
+float Kp1=13.0,Ki1=0.0,Kd1=0.25,/*第一级的PID系数*/
       Kp2=30,Ki2=0.0,Kd2=20;/*第二级的PID系数*/
 
 //计算速度有关:
@@ -39,7 +39,7 @@ int L_cnt=0,R_cnt=0,
     Aim_velocity=0,Aim_derction=0;
 
 float accgyo[3];   //只需要三个数据，依次为x轴加速度、z轴加速度、y轴角速度
-float Angle=0,Aim_angle=0,Gyo=0;    //小车倾角，和角速度
+float Angle=0,Aim_angle=-4,Gyo=0;    //小车倾角，和角速度
 
 //陀螺仪初始化
 void Mpu6050_Init()
@@ -88,16 +88,14 @@ void CalculateAngle()
 {
   static float gyo_last=0;
   
+  Gyo=0.5*(accgyo[2]+gyo_last);   //角速度一阶滤波
   gyo_last=accgyo[2];
 
   float acc_angle = 57.296*atan(accgyo[0]/accgyo[1]) - CAROFFSET;  //根据加速度计算的倾角
   float gyo_angle = Angle+(accgyo[2])*0.005;           //角速度积分计算的倾角
   
-  Angle = 0.995*gyo_angle + 0.005 * acc_angle;    //加权融合
-  
-  Gyo= gyo_last;   //角速度一阶滤波
-
-  //Serial.println(Angle);  //测试小车的机械中值
+  Angle=0.005*acc_angle+0.995*gyo_angle;    //加权融合
+//  Serial.println(Angle);  //测试小车的机械中值
 }
 
 //编码器中断处理函数。 正负，加减，高低电平需要实测
@@ -204,11 +202,13 @@ void Balance_control()
   
   I1+=angle_error;
   
-  Balance_pwm = (angle_error * Kp1 + I1 * Ki1 + Gyo * Kd1);
+  Balance_pwm = angle_error * Kp1 + I1 * Ki1 + Gyo * Kd1;
+  //Balance_pwm;
   
   last1=angle_error;
   
   //Serial.println(Gyo);
+  Serial.println(Angle); 
 }
 
 //方向控制
@@ -224,7 +224,7 @@ void Direction_control()
 int Velocity_pwm=0;
 void Velocity_control()
 {
-  float p=0.5,v_I=0.01;
+  float p=-0.09,v_I=0.0;
   int error = L_velocity+R_velocity-Aim_velocity;
   static int I = 0;
   I+=error;
@@ -236,8 +236,10 @@ void Out_Flash()
 {
   //int L_pwm=Balance_pwm+Velocity_pwm-Direction_pwm,
   //    R_pwm=Balance_pwm+Velocity_pwm+Direction_pwm;
-  int L_pwm=Balance_pwm,
-      R_pwm=Balance_pwm;
+  int L_pwm=Balance_pwm+Velocity_pwm,
+      R_pwm=Balance_pwm+Velocity_pwm;
+  //int L_pwm=Velocity_pwm,
+  //    R_pwm=Velocity_pwm;
   //去掉死区,死去大小要实测
   if(L_pwm>0)L_pwm+=15;
   else L_pwm-=15;
