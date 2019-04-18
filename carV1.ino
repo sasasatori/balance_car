@@ -31,7 +31,7 @@
 
 //PID 相关
 float Kp1=1.0,Ki1=0.0,Kd1=0.0,/*第一级的PID系数*/
-      Kp2=10.0,Ki2=0.0,Kd2=0.0;/*第二级的PID系数*/
+      Kp2=30,Ki2=0.0,Kd2=20;/*第二级的PID系数*/
 
 //计算速度有关:
 int L_cnt=0,R_cnt=0,
@@ -88,7 +88,6 @@ void CalculateAngle()
 {
   static float gyo_last=0;
   
-  
   gyo_last=accgyo[2];
 
   float acc_angle = 57.296*atan(accgyo[0]/accgyo[1]) - CAROFFSET;  //根据加速度计算的倾角
@@ -98,7 +97,7 @@ void CalculateAngle()
   
   Gyo= gyo_last;   //角速度一阶滤波
 
-  Serial.println(Angle);  //测试小车的机械中值
+  //Serial.println(Angle);  //测试小车的机械中值
 }
 
 //编码器中断处理函数。 正负，加减，高低电平需要实测
@@ -205,7 +204,7 @@ void Balance_control()
   
   I1+=angle_error;
   
-  aim_gyo = (angle_error*Kp1+I1*Ki1+(angle_error-last1)*Kd1);
+  aim_gyo = (angle_error * Kp1 + I1 * Ki1 + (angle_error-last1) * Kd1);
   
   last1=angle_error;
   
@@ -213,11 +212,11 @@ void Balance_control()
 
   I2+=gyo_error;
   
-  Balance_pwm = -(gyo_error*Kp2 + I2 * Ki2 + (gyo_error - last2)*Kd2);
+  Balance_pwm = (gyo_error*Kp2 + I2 * Ki2 + (gyo_error - last2)*Kd2);
   //Balance_pwm = 0;
 
   last2=gyo_error;
-  //Serial.println(Angle);
+  Serial.println(Gyo);
 }
 
 //方向控制
