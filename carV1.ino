@@ -30,7 +30,7 @@
 //SoftwareSerial BTserial(BTRX,BTTX);
 
 //PID 相关
-float Kp1=1.0,Ki1=0.0,Kd1=0.0,/*第一级的PID系数*/
+float Kp1=-5.0,Ki1=0.0,Kd1=-1.0,/*第一级的PID系数*/
       Kp2=30,Ki2=0.0,Kd2=20;/*第二级的PID系数*/
 
 //计算速度有关:
@@ -204,19 +204,11 @@ void Balance_control()
   
   I1+=angle_error;
   
-  aim_gyo = (angle_error * Kp1 + I1 * Ki1 + (angle_error-last1) * Kd1);
+  Balance_pwm = (angle_error * Kp1 + I1 * Ki1 + Gyo * Kd1);
   
   last1=angle_error;
   
-  gyo_error = aim_gyo - Gyo;
-
-  I2+=gyo_error;
-  
-  Balance_pwm = (gyo_error*Kp2 + I2 * Ki2 + (gyo_error - last2)*Kd2);
-  //Balance_pwm = 0;
-
-  last2=gyo_error;
-  Serial.println(Gyo);
+  //Serial.println(Gyo);
 }
 
 //方向控制
