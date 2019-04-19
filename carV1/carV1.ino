@@ -240,7 +240,7 @@ void Direction_control()
 int Velocity_pwm=0;
 void Velocity_control()
 {
-  float p=0.5,v_I=0.01;
+  float p=1.5,v_I=0.08;
   int error = L_velocity+R_velocity-Aim_velocity;
   static int I = 0;
   I+=error;
