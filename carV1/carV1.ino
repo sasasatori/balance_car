@@ -27,11 +27,13 @@
 //机械中值
 #define CAROFFSET -2.1
 
+#define velocity_max 100
+
 //SoftwareSerial BTserial(BTRX,BTTX);
 
 //PID 相关
-float Kp1=13.0,Ki1=0.0,Kd1=0.25,/*第一级的PID系数*/
-      Kp2=30,Ki2=0.0,Kd2=20;/*第二级的PID系数*/
+float Kp1=-13.0,Ki1=0.0,Kd1=-0.25,/*第一级的PID系数*/
+      Kp2=-20.0,Ki2=0.0,Kd2=-0.25;/*第二级的PID系数*/
 
 //计算速度有关:
 int L_cnt=0,R_cnt=0,
@@ -39,7 +41,7 @@ int L_cnt=0,R_cnt=0,
     Aim_velocity=0,Aim_derction=0;
 
 float accgyo[3];   //只需要三个数据，依次为x轴加速度、z轴加速度、y轴角速度
-float Angle=0,Aim_angle=-4,Gyo=0;    //小车倾角，和角速度
+float Angle=0,Aim_angle=-1,Gyo=0;    //小车倾角，和角速度
 
 //陀螺仪初始化
 void Mpu6050_Init()
@@ -144,6 +146,15 @@ void Set_pwm(int L_pwm,int R_pwm)
     digitalWrite(PWMB,LOW);
     return;
   }*/
+  if(Angle<Aim_angle+3 && Angle > Aim_angle-3)
+  {
+    digitalWrite(IN1,LOW);
+    digitalWrite(IN2,LOW);
+    digitalWrite(PWMA,LOW);
+    digitalWrite(IN3,LOW);
+    digitalWrite(IN4,LOW);
+    digitalWrite(PWMB,LOW);
+  }
   
   //限幅
   if(L_pwm<-255)L_pwm=-255;
@@ -197,18 +208,23 @@ void Balance_control()
   static float I1=0/*为计算第一级积分*/,I2=0/*为计算第二级积分*/,last1=0,/*为计算第一级微分*/last2=0/*为计算第二级的微分*/,out1=0/*第一级的输出*/;
   float angle_error=0;
   float gyo_error = 0;
+
+  float velocity = (L_velocity + R_velocity)*0.5;
   
   angle_error=Angle-Aim_angle;
   
   I1+=angle_error;
-  
+
+  if(velocity < 70 && velocity > -70)
   Balance_pwm = angle_error * Kp1 + I1 * Ki1 + Gyo * Kd1;
+  else
+  Balance_pwm = angle_error * Kp2 + I1 * Ki1 + Gyo * Kd2;
   //Balance_pwm;
   
   last1=angle_error;
   
   //Serial.println(Gyo);
-  Serial.println(Angle); 
+  //Serial.println(Angle); 
 }
 
 //方向控制
@@ -224,7 +240,7 @@ void Direction_control()
 int Velocity_pwm=0;
 void Velocity_control()
 {
-  float p=-0.09,v_I=0.0;
+  float p=0.5,v_I=0.01;
   int error = L_velocity+R_velocity-Aim_velocity;
   static int I = 0;
   I+=error;
@@ -234,20 +250,25 @@ void Velocity_control()
 //刷新输出
 void Out_Flash()
 {
-  //int L_pwm=Balance_pwm+Velocity_pwm-Direction_pwm,
-  //    R_pwm=Balance_pwm+Velocity_pwm+Direction_pwm;
-  int L_pwm=Balance_pwm+Velocity_pwm,
-      R_pwm=Balance_pwm+Velocity_pwm;
-  //int L_pwm=Velocity_pwm,
-  //    R_pwm=Velocity_pwm;
+  int L_pwm,R_pwm;
+ 
+   L_pwm=Balance_pwm+Velocity_pwm;
+   R_pwm=Balance_pwm+Velocity_pwm;
+  
   //去掉死区,死去大小要实测
   if(L_pwm>0)L_pwm+=15;
   else L_pwm-=15;
   if(R_pwm>0)R_pwm+=15;
   else R_pwm-=15;
+
+  if(L_pwm >= velocity_max)L_pwm = velocity_max;
+  if(L_pwm <= -velocity_max)L_pwm = -velocity_max;
+  if(R_pwm >= velocity_max)R_pwm = velocity_max;
+  if(R_pwm <= -velocity_max)R_pwm = -velocity_max;
+
+  Serial.println(R_pwm);
   
   Set_pwm(L_pwm,R_pwm);
-  //Serial.println(L_pwm);
 }
 
 long t1=0;//控制函数计时
