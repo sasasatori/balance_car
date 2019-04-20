@@ -29,11 +29,11 @@
 
 #define velocity_max 100
 
-//SoftwareSerial BTserial(BTRX,BTTX);
+SoftwareSerial BTserial(BTRX,BTTX);
 
 //PID 相关
-float Kp1=-13.0,Ki1=0.0,Kd1=-0.25,/*第一级的PID系数*/
-      Kp2=-20.0,Ki2=0.0,Kd2=-0.25;/*第二级的PID系数*/
+float Kp1=-13.0,Ki1=0.0,Kd1=-0.35,/*第一级的PID系数*/
+      Kp2=-20.0,Ki2=0.001,Kd2=-0.25;/*第二级的PID系数*/
 
 //计算速度有关:
 int L_cnt=0,R_cnt=0,
@@ -146,6 +146,7 @@ void Set_pwm(int L_pwm,int R_pwm)
     digitalWrite(PWMB,LOW);
     return;
   }*/
+  /*
   if(Angle<Aim_angle+3 && Angle > Aim_angle-3)
   {
     digitalWrite(IN1,LOW);
@@ -154,7 +155,7 @@ void Set_pwm(int L_pwm,int R_pwm)
     digitalWrite(IN3,LOW);
     digitalWrite(IN4,LOW);
     digitalWrite(PWMB,LOW);
-  }
+  }*/
   
   //限幅
   if(L_pwm<-255)L_pwm=-255;
@@ -231,7 +232,7 @@ void Balance_control()
 int Direction_pwm=0;
 void Direction_control()
 {
-  float p=0.3;
+  float p=0.03;
   L_cnt+=Aim_derction;
   R_cnt-=Aim_derction;
   Direction_pwm=(L_cnt-R_cnt)*p;
@@ -240,7 +241,7 @@ void Direction_control()
 int Velocity_pwm=0;
 void Velocity_control()
 {
-  float p=1.5,v_I=0.08;
+  float p=1.8,v_I=0.15;
   int error = L_velocity+R_velocity-Aim_velocity;
   static int I = 0;
   I+=error;
@@ -252,8 +253,8 @@ void Out_Flash()
 {
   int L_pwm,R_pwm;
  
-   L_pwm=Balance_pwm+Velocity_pwm;
-   R_pwm=Balance_pwm+Velocity_pwm;
+   L_pwm=Balance_pwm+Velocity_pwm+Aim_derction;
+   R_pwm=Balance_pwm+Velocity_pwm-Aim_derction;
   
   //去掉死区,死去大小要实测
   if(L_pwm>0)L_pwm+=15;
@@ -266,7 +267,7 @@ void Out_Flash()
   if(R_pwm >= velocity_max)R_pwm = velocity_max;
   if(R_pwm <= -velocity_max)R_pwm = -velocity_max;
 
-  Serial.println(R_pwm);
+  //Serial.println(R_pwm);
   
   Set_pwm(L_pwm,R_pwm);
 }
@@ -299,6 +300,8 @@ void Kernel()
    Balance_control();
    Out_Flash(); 
    cnt++;
+
+   //Serial.println(Aim_velocity);
 }
 
 long t;   //记录中断运行时
@@ -319,8 +322,8 @@ void setup() {
   pinMode(IN4,OUTPUT);
 //  pinMode(PWMB,OUTPUT);
   
-  Serial.begin(9600);   //串口调试,波特率的高低决定串口打印的时间
-//  BTserial.begin(9600);
+  Serial.begin(250000);   //串口调试,波特率的高低决定串口打印的时间
+  BTserial.begin(9600);
   
   //BTserial.println("AT+NAMEBalanceCar0");
   //delay(1000);
@@ -341,47 +344,24 @@ void setup() {
 char a,num[8],ch;
 void loop() {
   // put your main code here, to run repeatedly:
-//    if(BTserial.available())
-//    {
-//      a=BTserial.read(); 
-//      //Serial.print(a);
-//      if(a=='{')
-//      {
-//        char p=0;
-//        
-//        ch=BTserial.read();
-//        BTserial.read();
-//        
-//         while(BTserial.available())
-//         {
-//           num[p++]=BTserial.read();
-//         }
-//         num[--p]='\0';
-//         float nu=atol(num);
-//         Serial.println(nu);
-//         switch(ch)
-//         {
-//          case '0':Kp1+=(nu-50000)/200000;
-//          case '1':Ki1+=(nu-50000)/200000;
-//          case '2':Kd1+=(nu-50000)/200000;
-//          case '3':Kp2+=(nu-50000)/200000;
-//          case '4':Ki2+=(nu-50000)/200000;
-//          case '5':Kd2+=(nu-50000)/200000;
-//         }
-//         
-//      }
-//      switch (a)
-//      {
-//        case 'A':Aim_velocity=-5;Aim_derction=0;break;
-//        case 'B':Aim_velocity=-5;Aim_derction=1;break;
-//        case 'C':Aim_velocity=0;Aim_derction=1;break;
-//        case 'D':Aim_velocity=5;Aim_derction=1;break;
-//        case 'E':Aim_velocity=5;Aim_derction=0;break;
-//        case 'F':Aim_velocity=5;Aim_derction=-1;break;
-//        case 'G':Aim_velocity=0;Aim_derction=-1;break;
-//        case 'H':Aim_velocity=-5;Aim_derction=-1;break;
-//        case 'Z':Aim_velocity=0;Aim_derction=0;break;
-//      }
-//    }
+   if(BTserial.available())
+   {
+     a=BTserial.read(); 
+
+     switch (a)
+     {
+       case 'A':Aim_velocity=-1;Aim_derction=0;break;
+       case 'B':Aim_velocity=-1;Aim_derction=1;break;
+       case 'C':Aim_velocity=0;Aim_derction=1;break;
+       case 'D':Aim_velocity=1;Aim_derction=1;break;
+       case 'E':Aim_velocity=1;Aim_derction=0;break;
+       case 'F':Aim_velocity=1;Aim_derction=-1;break;
+       case 'G':Aim_velocity=0;Aim_derction=-1;break;
+       case 'H':Aim_velocity=-1;Aim_derction=-1;break;
+       case 'Z':Aim_velocity=0;Aim_derction=0;break;
+     }
+      Aim_velocity *= 40;
+      Aim_derction *= 10;
+   }
     
 }
